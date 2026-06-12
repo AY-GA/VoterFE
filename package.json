@@ -1,0 +1,29 @@
+{
+  "name": "voter-simulation-ui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev --host 127.0.0.1",
+    "dev:all": "npm run dev",
+    "start": "npm run dev:all",
+    "build": "vite build",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "preview": "vite preview --host 127.0.0.1",
+    "validate": "npm run check && npm run build"
+  },
+  "dependencies": {
+    "lucide-svelte": "^0.468.0",
+    "svelte": "^5.19.0"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-auto": "^7.0.1",
+    "@sveltejs/kit": "^2.65.0",
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
+    "@tsconfig/svelte": "^5.0.4",
+    "svelte-check": "^4.1.4",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.0"
+  }
+}
