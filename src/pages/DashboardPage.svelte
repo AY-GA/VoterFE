@@ -12,7 +12,7 @@
 </script>
 
 <svelte:head>
-  <title>Přehled | VoterNN</title>
+  <title>Overview | VoterNN</title>
 </svelte:head>
 
 <section class="dashboard-grid">
@@ -20,7 +20,7 @@
     <div class="panel-heading">
       <div>
         <p class="eyebrow">backend</p>
-        <h2>Stav připojení</h2>
+        <h2>Connection status</h2>
       </div>
       <Server size={22} />
     </div>
@@ -28,7 +28,7 @@
     <div class="metric-grid">
       <div>
         <span>Verze</span>
-        <strong>{version?.version_string ?? 'nenačteno'}</strong>
+        <strong>{version?.version_string ?? 'not loaded'}</strong>
       </div>
       <div>
         <span>Major</span>
@@ -75,7 +75,7 @@
 
     {#if map}
       <p class="delta-copy">
-        První district: {map.districts[0]?.name ?? 'žádný'}.
+        First district: {map.districts[0]?.name ?? 'none'}.
       </p>
     {/if}
   </article>
@@ -84,7 +84,7 @@
     <div class="panel-heading">
       <div>
         <p class="eyebrow">polling</p>
-        <h2>Poslední národní průzkum</h2>
+        <h2>Latest national poll</h2>
       </div>
       <BarChart3 size={22} />
     </div>
@@ -99,15 +99,15 @@
         {/each}
       </div>
     {:else}
-      <p class="delta-copy">Zatím není načtený žádný průzkum.</p>
+      <p class="delta-copy">No poll data loaded yet.</p>
     {/if}
   </article>
 
   <article class="event-panel">
     <div class="panel-heading">
       <div>
-        <p class="eyebrow">volby</p>
-        <h2>Aktuální lídr</h2>
+        <p class="eyebrow">elections</p>
+        <h2>Current leader</h2>
       </div>
       <Gauge size={22} />
     </div>
@@ -115,10 +115,10 @@
       <div class="support-summary">
         <span>{leadingParty.party_uuid}</span>
         <strong>{leadingParty.percentage.toFixed(1)} %</strong>
-        <small>podle posledního pollingu</small>
+        <small>according to the latest polling</small>
       </div>
     {:else}
-      <p class="delta-copy">Spusťte polling nebo nastavte token simulace.</p>
+      <p class="delta-copy">Run a poll or set a simulation token.</p>
     {/if}
   </article>
 </section>

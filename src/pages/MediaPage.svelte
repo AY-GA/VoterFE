@@ -13,7 +13,7 @@
 </script>
 
 <svelte:head>
-  <title>Média a zákony | VoterNN</title>
+  <title>Media & Laws | VoterNN</title>
 </svelte:head>
 
 <section class="media-layout">
