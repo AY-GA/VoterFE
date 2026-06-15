@@ -4,7 +4,7 @@
 
   const { version, map, poll } = getSimulationContext();
 
-  $: leadingParty = $poll?.national?.length
+  let leadingParty = $poll?.national?.length
     ? [...$poll.national].sort((a, b) => b.percentage - a.percentage)[0]
     : null;
 </script>

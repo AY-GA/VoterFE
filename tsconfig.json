@@ -6,4 +6,13 @@
     "strict": true,
     "moduleResolution": "bundler"
   }
+  ,
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    ".svelte-kit",
+    "public",
+    "static"
+  ]
 }

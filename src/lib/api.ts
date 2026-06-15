@@ -10,7 +10,9 @@ import type {
 } from './types';
 
 const SETTINGS_KEY = 'voternn-api-settings';
-const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
+// In dev, prefer relative URLs so Vite dev-server proxy can forward requests to WSL backend.
+const DEFAULT_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '' : 'http://127.0.0.1:8080');
 
 type JsonBody = Record<string, unknown>;
 
@@ -47,6 +49,7 @@ async function request<T>(
 ): Promise<T> {
   const method = options.method ?? 'POST';
   const baseUrl = settings.baseUrl.trim().replace(/\/$/, '');
+  const url = baseUrl ? `${baseUrl}${path}` : path;
 
   if (!baseUrl) {
     throw new Error('Nastavte URL backendu.');
@@ -56,7 +59,7 @@ async function request<T>(
     throw new Error('Nastavte token simulace.');
   }
 
-  const response = await fetch(`${baseUrl}${path}`, {
+  const response = await fetch(url, {
     method,
     headers:
       method === 'POST'
@@ -88,7 +91,9 @@ async function request<T>(
 export const api = {
   getVersion: (settings: ApiSettings) =>
     request<VersionResponse>(settings, '/version/', { method: 'GET', token: false }),
-  getMap: (settings: ApiSettings) => request<MapResponse>(settings, '/map/'),
+  // allow callers to override options (for example: { method: 'GET', token: false })
+  getMap: (settings: ApiSettings, options?: { method?: 'GET' | 'POST'; body?: JsonBody; token?: boolean }) =>
+    request<MapResponse>(settings, '/map/', options),
   increment: (settings: ApiSettings, days: number) =>
     request<void>(settings, '/increment/', { body: { days } }),
   reset: (settings: ApiSettings) => request<void>(settings, '/reset/'),
@@ -110,7 +115,7 @@ export const api = {
   deleteParty: (settings: ApiSettings, party_uuid: string) =>
     request<void>(settings, '/party/delete', { body: { party_uuid } }),
   addMedia: (settings: ApiSettings, name: string) =>
-    request<void>(settings, '/media/add/', { body: { name } }),
+    request<void>(settings, '/media/create/', { body: { name } }),
   addLaw: (settings: ApiSettings, text: string, force = false) =>
     request<void>(settings, force ? '/law/force/' : '/law/add/', { body: { text } }),
   repealLaw: (settings: ApiSettings, law_uuid: string) =>

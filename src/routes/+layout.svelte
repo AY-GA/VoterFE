@@ -84,6 +84,24 @@
     void loadBackendState();
   }
 
+  // Auto-load backend state when the base URL changes (debounced).
+  // Initialize with current base so we don't trigger on startup (onMount already loads once).
+  let settingsTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastBaseUrl = (get(settings).baseUrl ?? '').trim();
+
+  settings.subscribe((current) => {
+    const base = (current.baseUrl ?? '').trim();
+    if (base === lastBaseUrl) return;
+    lastBaseUrl = base;
+    if (settingsTimer) clearTimeout(settingsTimer);
+    settingsTimer = setTimeout(() => {
+      if (base) {
+        // Try to load backend state immediately when a base URL is entered.
+        void loadBackendState();
+      }
+    }, 500);
+  });
+
   async function loadBackendState() {
     loading.set(true);
     message.set(null);
@@ -93,28 +111,31 @@
     try {
       version.set(await api.getVersion(currentSettings));
 
-      if (currentSettings.token.trim()) {
-        const [mapResult, pollResult] = await Promise.allSettled([
-          api.getMap(currentSettings),
-          api.getLastPoll(currentSettings)
-        ]);
-
-        if (mapResult.status === 'fulfilled') {
-          map.set(mapResult.value);
+      // Always try to fetch the map (without requiring a token) so the UI
+      // can show district data as soon as a backend URL is entered.
+      try {
+        const fetchedMap = await api.getMap(currentSettings, { method: 'GET', token: false });
+        map.set(fetchedMap);
+      } catch (mapErr) {
+        map.set(null);
+        // don't spam the user with an error if only a token is missing; show info instead
+        if (currentSettings.token.trim()) {
+          showMessage('error', mapErr instanceof Error ? mapErr.message : 'Map failed.');
         } else {
-          map.set(null);
-          showMessage('error', mapResult.reason instanceof Error ? mapResult.reason.message : 'Map failed.');
+          showMessage('info', 'Backend version loaded. Add a simulation token to load polling and other secured endpoints.');
         }
+      }
 
-        if (pollResult.status === 'fulfilled') {
-          poll.set(pollResult.value);
-        } else {
+      // Polling and other token-protected endpoints still require a token.
+      if (currentSettings.token.trim()) {
+        try {
+          const last = await api.getLastPoll(currentSettings);
+          poll.set(last);
+        } catch (pollErr) {
           poll.set(null);
         }
       } else {
-        map.set(null);
         poll.set(null);
-        showMessage('info', 'Backend version loaded. Add a simulation token to load map and polling.');
       }
     } catch (error) {
       version.set(null);
