@@ -48,51 +48,89 @@ async function request<T>(
   options: { method?: 'GET' | 'POST'; body?: JsonBody; token?: boolean } = {}
 ): Promise<T> {
   const method = options.method ?? 'POST';
-  const baseUrl = settings.baseUrl.trim().replace(/\/$/, '');
-  const url = baseUrl ? `${baseUrl}${path}` : path;
+  const rawBase = (settings.baseUrl ?? '').trim().replace(/\/$/, '');
 
-  if (!baseUrl) {
-    throw new Error('Nastavte URL backendu.');
+  // If a base URL is explicitly provided, always use it (including localhost:8080).
+  // If none is provided, use relative paths in dev so the Vite proxy can forward requests.
+  let url: string;
+  if (rawBase) {
+    url = `${rawBase}${path}`;
+  } else if (import.meta.env.DEV) {
+    url = path;
+  } else {
+    throw new Error('Please set a backend URL.');
   }
 
-  if (method === 'POST' && options.token !== false && !settings.token.trim()) {
-    throw new Error('Nastavte token simulace.');
+  if (options.token !== false && !settings.token.trim()) {
+    throw new Error('Please set a simulation token.');
   }
 
-  const response = await fetch(url, {
-    method,
-    headers:
-      method === 'POST'
-        ? {
-            'Content-Type': 'application/json'
-          }
-        : undefined,
-    body:
-      method === 'POST'
-        ? JSON.stringify({
-            ...(options.token === false ? {} : { token: settings.token.trim() }),
-            ...(options.body ?? {})
-          })
-        : undefined
-  });
+  // For GET requests, append token as query parameter (GET requests shouldn't have a body)
+  if (method === 'GET' && options.token !== false && settings.token.trim()) {
+    const separator = url.includes('?') ? '&' : '?';
+    url += `${separator}token=${encodeURIComponent(settings.token.trim())}`;
+  }
+
+  const response = await Promise.race([
+    fetch(url, {
+      method,
+      headers:
+        method === 'POST'
+          ? {
+              'Content-Type': 'application/json'
+            }
+          : undefined,
+      body:
+        method === 'POST'
+          ? JSON.stringify({
+              ...(options.token === false ? {} : { token: settings.token.trim() }),
+              ...(options.body ?? {})
+            })
+          : undefined
+    }),
+    new Promise<Response>((_, reject) =>
+      setTimeout(() => reject(new Error(`API ${path} request timeout after 10 seconds`)), 10000)
+    )
+  ]);
 
   if (response.status === 204) {
     return undefined as T;
   }
 
   if (!response.ok) {
-    throw new Error(`API ${path} selhalo: ${response.status} ${response.statusText}`);
+    throw new Error(`API ${path} failed: ${response.status} ${response.statusText}`);
   }
 
   const text = await response.text();
-  return (text ? JSON.parse(text) : undefined) as T;
+  console.log(`API ${path} response:`, text);
+  
+  if (!text) {
+    return undefined as T;
+  }
+  
+  try {
+    return JSON.parse(text) as T;
+  } catch (err) {
+    // Try to find and parse JSON if there's garbage text before it
+    const jsonStart = text.indexOf('{');
+    if (jsonStart !== -1) {
+      try {
+        const json = text.substring(jsonStart);
+        console.log(`API ${path} extracted JSON:`, json);
+        return JSON.parse(json) as T;
+      } catch {
+        throw new Error(`API ${path} returned invalid JSON: ${text.substring(0, 200)}`);
+      }
+    }
+    throw new Error(`API ${path} returned invalid JSON: ${text.substring(0, 200)}`);
+  }
 }
 
 export const api = {
   getVersion: (settings: ApiSettings) =>
     request<VersionResponse>(settings, '/version/', { method: 'GET', token: false }),
   // allow callers to override options (for example: { method: 'GET', token: false })
-  getMap: (settings: ApiSettings, options?: { method?: 'GET' | 'POST'; body?: JsonBody; token?: boolean }) =>
+  getMap: (settings: ApiSettings, options?: { method?: 'POST'; body?: JsonBody; token?: boolean }) =>
     request<MapResponse>(settings, '/map/', options),
   increment: (settings: ApiSettings, days: number) =>
     request<void>(settings, '/increment/', { body: { days } }),

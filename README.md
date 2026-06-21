@@ -44,10 +44,10 @@ npm run validate
 
 ## API Configuration
 
-The UI defaults to `http://127.0.0.1:8000` for the backend. You can set defaults with environment variables:
+The UI defaults to `http://127.0.0.1:8080` for the backend. You can set defaults with environment variables:
 
 ```bash
-VITE_API_BASE_URL=http://127.0.0.1:8000
+VITE_API_BASE_URL=http://127.0.0.1:8080
 VITE_API_TOKEN=your-simulation-token
 ```
 

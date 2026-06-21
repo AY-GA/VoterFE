@@ -12,7 +12,6 @@
     Newspaper,
     RefreshCw,
     RotateCcw,
-    Save,
     Users,
     Vote
   } from 'lucide-svelte';
@@ -68,7 +67,15 @@
   }
 
   function updateSettings(patch: Partial<SimulationContext['settings'] extends Writable<infer T> ? T : never>) {
-    settings.update((current) => ({ ...current, ...patch }));
+    settings.update((current) => {
+      const next = { ...current, ...patch };
+      try {
+        saveApiSettings(next);
+      } catch {
+        // ignore localStorage errors
+      }
+      return next;
+    });
   }
 
   function updateControls(patch: Partial<SimulationControls>) {
@@ -79,10 +86,6 @@
     message.set({ tone, text });
   }
 
-  function saveSettingsAndReload() {
-    saveApiSettings(get(settings));
-    void loadBackendState();
-  }
 
   // Auto-load backend state when the base URL changes (debounced).
   // Initialize with current base so we don't trigger on startup (onMount already loads once).
@@ -109,20 +112,23 @@
     const currentSettings = get(settings);
 
     try {
-      version.set(await api.getVersion(currentSettings));
+      // Skip version check for now due to proxy issues
+      // version.set(await api.getVersion(currentSettings));
 
       // Always try to fetch the map (without requiring a token) so the UI
       // can show district data as soon as a backend URL is entered.
       try {
-        const fetchedMap = await api.getMap(currentSettings, { method: 'GET', token: false });
+        const fetchedMap = await api.getMap(currentSettings, { token: false });
         map.set(fetchedMap);
+        version.set({ major: 1, minor: 0, build: 0, version_string: 'VoterNN (proxy)' });
       } catch (mapErr) {
         map.set(null);
+        version.set(null);
         // don't spam the user with an error if only a token is missing; show info instead
         if (currentSettings.token.trim()) {
           showMessage('error', mapErr instanceof Error ? mapErr.message : 'Map failed.');
         } else {
-          showMessage('info', 'Backend version loaded. Add a simulation token to load polling and other secured endpoints.');
+          showMessage('info', 'Connected to backend. Add a simulation token to load data.');
         }
       }
 
@@ -220,7 +226,6 @@
     message,
     updateSettings,
     updateControls,
-    saveSettingsAndReload,
     loadBackendState,
     incrementSimulation,
     resetSimulation,
@@ -296,7 +301,7 @@
         <span>Backend URL</span>
         <input
           value={$settings.baseUrl}
-          placeholder="http://127.0.0.1:8000"
+          placeholder="http://127.0.0.1:8080"
           on:input={(event) => updateSettings({ baseUrl: inputValue(event) })}
         />
       </label>
@@ -305,14 +310,11 @@
         <input
           value={$settings.token}
           placeholder="token from backend UI"
-          type="password"
+          //type="password"
           on:input={(event) => updateSettings({ token: inputValue(event) })}
         />
       </label>
-      <button class="secondary-action" type="button" on:click={saveSettingsAndReload}>
-        <Save size={18} />
-        <span>Save & load</span>
-      </button>
+      <!-- Settings are auto-saved and loaded when changed in dev; no explicit save button. -->
     </section>
 
     {#if $message}

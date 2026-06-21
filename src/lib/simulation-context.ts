@@ -22,7 +22,6 @@ export type SimulationContext = {
   message: Writable<ApiMessage | null>;
   updateSettings: (patch: Partial<ApiSettings>) => void;
   updateControls: (patch: Partial<SimulationControls>) => void;
-  saveSettingsAndReload: () => void;
   loadBackendState: () => Promise<void>;
   incrementSimulation: () => Promise<void>;
   resetSimulation: () => Promise<void>;
