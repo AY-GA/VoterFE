@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { BrainCircuit, Search, UserPlus } from 'lucide-svelte';
+  import { onMount } from 'svelte';
+  import { BrainCircuit, RefreshCw, Search, UserPlus, Users } from 'lucide-svelte';
   import type { ApiSettings, VoterInput, VoterRecord } from '../lib/types';
   import { api } from '../lib/api';
 
@@ -18,12 +19,19 @@
     'equality_markets',
     'nation_globe',
     'liberty_authority',
-    'tradition_progress'
+    // 'tradition_progress' removed from UI
   ] as const;
 
   let voterUuid = '';
   let voter: VoterRecord | null = null;
   let message = '';
+  let search = '';
+  let voters: VoterRecord[] = [];
+  let voterTotal = 0;
+  let loadingVoters = false;
+  let lastListKey = '';
+  let mounted = false;
+  let creatingVoter = false;
   let form: VoterInput = {
     name: '',
     middlename: '',
@@ -43,24 +51,97 @@
     tradition_progress: 0
   };
 
-  async function getVoter() {
+  $: listKey = `${settings.baseUrl}|${settings.token}`;
+  $: if (mounted && listKey !== lastListKey) {
+    lastListKey = listKey;
+    void listVoters();
+  }
+
+  function fullName(row: VoterRecord) {
+    return [row.name, row.middlename, row.surname].filter(Boolean).join(' ') || 'Unnamed voter';
+  }
+
+  async function listVoters() {
+    if (!settings.token.trim()) {
+      voters = [];
+      voterTotal = 0;
+      return;
+    }
+
+    loadingVoters = true;
     message = '';
     try {
-      voter = await api.getVoter(settings, voterUuid);
+      const response = await api.listVoters(settings, search, 50);
+      voters = response.voters;
+      voterTotal = response.total ?? response.voters.length;
     } catch (error) {
-      message = error instanceof Error ? error.message : 'Could not load voter.';
+      voters = [];
+      voterTotal = 0;
+      setMessage(error instanceof Error ? error.message : 'Could not load voters.');
+    } finally {
+      loadingVoters = false;
     }
   }
 
-  async function createVoter() {
-    message = '';
+  async function getVoter() {
     try {
-      await api.createVoter(settings, form);
-      message = 'Voter created.';
+      voter = await api.getVoter(settings, voterUuid);
+      voterUuid = voter.voter_uuid ?? voterUuid;
+      setMessage('Voter loaded.');
     } catch (error) {
-      message = error instanceof Error ? error.message : 'Could not create voter.';
+      setMessage(error instanceof Error ? error.message : 'Could not load voter.');
     }
   }
+
+  async function selectVoter(row: VoterRecord) {
+    const id = row.voter_uuid ?? '';
+    if (voter && id && id === voter.voter_uuid) {
+      unselectVoter();
+      return;
+    }
+    voterUuid = id;
+    voter = row;
+    if (voterUuid) {
+      await getVoter();
+    }
+  }
+
+  function unselectVoter() {
+    voter = null;
+    voterUuid = '';
+    setMessage('Voter unselected.');
+  }
+
+  async function createVoter() {
+    creatingVoter = true;
+    try {
+      await api.createVoter(settings, form);
+      setMessage('Voter created.');
+      await listVoters();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Could not create voter.');
+    } finally {
+      // keep the button disabled briefly to avoid duplicate submissions
+      setTimeout(() => {
+        creatingVoter = false;
+      }, 1000);
+    }
+  }
+
+  function sentenceCase(text: string) {
+    if (!text || text.length === 0) return text;
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
+  function setMessage(text: string) {
+    message = sentenceCase(text);
+  }
+
+  onMount(() => {
+    mounted = true;
+    lastListKey = listKey;
+    void listVoters();
+  });
 </script>
 
 <svelte:head>
@@ -72,48 +153,85 @@
     <div class="panel-heading">
       <div>
         <p class="eyebrow">voter</p>
-        <h2>Lookup voter NN positions</h2>
+        <h2>Lookup voters</h2>
       </div>
       <BrainCircuit size={22} />
     </div>
 
-    <label>
-      <span>Voter UUID</span>
-      <input bind:value={voterUuid} placeholder="voter_uuid" />
-    </label>
-    <button
-      class="primary-action action-block"
-      type="button"
-      disabled={running || !voterUuid.trim()}
-      on:click={getVoter}
-    >
-      <Search size={18} />
-      <span>Load voter</span>
-    </button>
+    <div class="lookup-bar">
+      <label>
+        <span>Name or UUID</span>
+        <input bind:value={search} placeholder="Search voters" on:keydown={(event) => event.key === 'Enter' && listVoters()} />
+      </label>
+      <button class="secondary-action" type="button" disabled={running || loadingVoters} on:click={listVoters}>
+        <Search size={18} />
+        <span>Search</span>
+      </button>
+      <button class="icon-button" type="button" title="Refresh voters" disabled={running || loadingVoters} on:click={listVoters}>
+        <RefreshCw size={18} />
+      </button>
+    </div>
 
-    {#if voter}
-      <div class="health-strip">
-        <div>
-          <span>Name</span>
-          <strong>{voter.name} {voter.surname}</strong>
+    <div class="voter-browser">
+      <div class="voter-list" aria-label="Voters">
+        <div class="list-summary">
+          <Users size={18} />
+          <span>{loadingVoters ? 'Loading voters...' : `${voters.length} shown${voterTotal > voters.length ? ` of ${voterTotal}` : ''}`}</span>
         </div>
-        <div>
-          <span>Age</span>
-          <strong>{voter.age}</strong>
-        </div>
-        <div>
-          <span>Future outlook</span>
-          <strong>{voter.future_outlook}</strong>
-        </div>
+
+        {#if voters.length}
+          {#each voters as row}
+            <button
+              class:active={!!row.voter_uuid && row.voter_uuid === voter?.voter_uuid}
+              type="button"
+              on:click={() => selectVoter(row)}
+            >
+              <strong>{fullName(row)}</strong>
+              <span>{row.voter_uuid}</span>
+            </button>
+          {/each}
+        {:else}
+          <p class="delta-copy">No voters found.</p>
+        {/if}
       </div>
-      <div class="issue-table">
-        {#each opinionKeys as key}
-          <div class="issue-row two-column">
-            <strong>{key}</strong>
-            <span style={`--bar:${Math.abs(Number(voter[key]))}%`}>{voter[key]}</span>
+
+      <div class="voter-detail">
+        <label>
+          <span>UUID</span>
+          <input value={voterUuid} readonly placeholder="voter_uuid" />
+        </label>
+
+        {#if voter}
+          <div class="health-strip">
+            <div>
+              <span>Name</span>
+              <strong>{fullName(voter)}</strong>
+            </div>
+            <div>
+              <span>Age</span>
+              <strong>{Number(voter.age).toFixed(0)}</strong>
+            </div>
+            <div>
+              <span>Future outlook</span>
+              <strong>{Number(voter.future_outlook).toFixed(2)}</strong>
+            </div>
           </div>
-        {/each}
+          <div class="issue-table">
+            {#each opinionKeys as key}
+              <div class="issue-row two-column">
+                <strong>{key}</strong>
+                <span style={`--bar:${Math.min(100, Math.abs(Number(voter[key]) * 100))}%`}>{Number(voter[key]).toFixed(2)}</span>
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <p class="delta-copy">Select a voter to inspect opinion positions.</p>
+        {/if}
       </div>
+    </div>
+
+    {#if message}
+      <p class="delta-copy">{message}</p>
     {/if}
   </article>
 
@@ -154,13 +272,9 @@
       {/each}
     </div>
 
-    <button class="primary-action action-block" type="button" disabled={running} on:click={createVoter}>
+    <button class="primary-action action-block" type="button" disabled={running || creatingVoter} on:click={createVoter}>
       <UserPlus size={18} />
       <span>Create voter</span>
     </button>
-
-    {#if message}
-      <p class="delta-copy">{message}</p>
-    {/if}
   </article>
 </section>

@@ -5,10 +5,20 @@
   export let poll: PollResponse | null;
   export let running: boolean;
   export let electionType: ElectionType;
+  export let setElectionType: (type: ElectionType) => void;
   export let runPoll: () => Promise<void>;
   export let snapElection: () => Promise<void>;
 
   $: national = [...(poll?.national ?? [])].sort((a, b) => b.percentage - a.percentage);
+  $: districts = poll?.districts ?? [];
+
+  function partyLabel(result: { party_uuid: string; party_name?: string }) {
+    return result.party_name?.trim() || result.party_uuid;
+  }
+
+  function electionInputValue(event: Event) {
+    return (event.currentTarget as HTMLSelectElement).value as ElectionType;
+  }
 </script>
 
 <svelte:head>
@@ -31,11 +41,12 @@
     </button>
 
     <div class="party-list padded-list">
-      {#each national as result}
+      {#if national.length}
+        {#each national as result}
         <article class="party-row" style={`--party:hsl(${result.party_uuid.length * 23} 65% 46%)`}>
           <div>
-            <strong>{result.party_uuid}</strong>
-            <span>party UUID</span>
+            <strong>{partyLabel(result)}</strong>
+            <span>{result.party_uuid}</span>
           </div>
           <div class="party-meter">
             <span>{result.percentage.toFixed(1)} %</span>
@@ -43,7 +54,10 @@
           </div>
           <b>{Math.round(result.percentage)}</b>
         </article>
-      {/each}
+        {/each}
+      {:else}
+        <p class="delta-copy">No national poll results yet. Run a poll to load current support.</p>
+      {/if}
     </div>
   </article>
 
@@ -58,7 +72,7 @@
 
     <label>
       <span>Election type</span>
-      <select bind:value={electionType}>
+      <select value={electionType} on:change={(event) => setElectionType(electionInputValue(event))}>
         <option value="parliament">parliament</option>
         <option value="senate">senate</option>
         <option value="president">president</option>
@@ -83,14 +97,18 @@
     </div>
 
     <div class="stack-list">
-      {#each poll?.districts ?? [] as district}
-        <article class="item-card">
-          <strong>{district.name ?? district.uuid ?? district.district_uuid ?? 'District'}</strong>
-          {#each district.results.slice(0, 3) as result}
-            <span>{result.party_uuid}: {result.percentage.toFixed(1)} %</span>
-          {/each}
-        </article>
-      {/each}
+      {#if districts.length}
+        {#each districts as district}
+          <article class="item-card">
+            <strong>{district.name ?? district.uuid ?? district.district_uuid ?? 'District'}</strong>
+            {#each [...district.results].sort((a, b) => b.percentage - a.percentage).slice(0, 3) as result}
+              <span>{partyLabel(result)}: {result.percentage.toFixed(1)} %</span>
+            {/each}
+          </article>
+        {/each}
+      {:else}
+        <p class="delta-copy">No district poll results yet.</p>
+      {/if}
     </div>
   </article>
 </section>

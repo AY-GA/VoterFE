@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>VoterNN District Visualizer</title>
+	<style>
+		.shit {
+			width: 10px;
+			height: 10px;
+			display: block;
+			margin: 0;
+			padding: 0px;
+		}
+		.sc {
+			display: grid;
+			gap: 0px;
+		}
+	</style>
+	<script>
+		function f() {
+			let elem = document.getElementById('w');
+			let oelem = document.getElementById('ooo');
+			let n = parseInt(document.getElementById('n').value);
+
+			let colors = [];
+			colors.push({ letter: 'A', r: 128, g: 0, b: 0})
+
+			let temp = '';
+			for(let i = 0; i < elem.innerText.length; i++) {
+				if(!(/^[a-z0-9]+$/i.test(elem.innerText[i]))) continue;
+
+				let obj = colors.find((v) => v.letter == elem.innerText[i]);
+				let lr = 0;
+				let lb = 0;
+				let lg = 0;
+				if(obj) {
+					lr = obj.r; lb = obj.b; lg = obj.g;
+				}
+				else {
+					lr = Math.random()*200+55;
+					lb = Math.random()*200+55;
+					lg = Math.random()*200+55;
+					colors.push({
+						letter: elem.innerText[i],
+						r: lr,
+						b: lb,
+						g: lg
+					})
+				}
+				temp += `<div class="shit" style='background-color: rgb(${lr}, ${lg}, ${lb});'></div>`;
+			}
+
+			oelem.innerHTML = temp;
+
+			oelem.style = `grid-template-columns: repeat(${n}, minmax(0, 1fr)); width: ${n*10}px`;
+		}
+	</script>
+</head>
+<body>
+	<div id="w" contenteditable="">Content...</div>
+	<input type="number" min="2" max="1000" step="1" id="n" value="120" />
+	<button onclick="f()">Run</button>
+	<br>
+	<div class="sc" id="ooo"></div>
+</body>
+</html>

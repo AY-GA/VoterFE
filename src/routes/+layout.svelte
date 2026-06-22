@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, setContext } from 'svelte';
-  import { get, writable } from 'svelte/store';
+  import { get, writable, type Writable } from 'svelte/store';
   import { page } from '$app/stores';
   import {
     Activity,
@@ -87,21 +87,20 @@
   }
 
 
-  // Auto-load backend state when the base URL changes (debounced).
-  // Initialize with current base so we don't trigger on startup (onMount already loads once).
+  // Auto-load backend state when connection settings change (debounced).
   let settingsTimer: ReturnType<typeof setTimeout> | null = null;
   let lastBaseUrl = (get(settings).baseUrl ?? '').trim();
+  let lastToken = get(settings).token.trim();
 
   settings.subscribe((current) => {
     const base = (current.baseUrl ?? '').trim();
-    if (base === lastBaseUrl) return;
+    const token = current.token.trim();
+    if (base === lastBaseUrl && token === lastToken) return;
     lastBaseUrl = base;
+    lastToken = token;
     if (settingsTimer) clearTimeout(settingsTimer);
     settingsTimer = setTimeout(() => {
-      if (base) {
-        // Try to load backend state immediately when a base URL is entered.
-        void loadBackendState();
-      }
+      void loadBackendState();
     }, 500);
   });
 
@@ -112,35 +111,33 @@
     const currentSettings = get(settings);
 
     try {
-      // Skip version check for now due to proxy issues
-      // version.set(await api.getVersion(currentSettings));
-
-      // Always try to fetch the map (without requiring a token) so the UI
-      // can show district data as soon as a backend URL is entered.
+      let versionInfo: Awaited<ReturnType<typeof api.getVersion>> | null = null;
       try {
-        const fetchedMap = await api.getMap(currentSettings, { token: false });
-        map.set(fetchedMap);
-        version.set({ major: 1, minor: 0, build: 0, version_string: 'VoterNN (proxy)' });
-      } catch (mapErr) {
-        map.set(null);
+        versionInfo = await api.getVersion(currentSettings);
+        version.set(versionInfo);
+      } catch {
         version.set(null);
-        // don't spam the user with an error if only a token is missing; show info instead
-        if (currentSettings.token.trim()) {
-          showMessage('error', mapErr instanceof Error ? mapErr.message : 'Map failed.');
-        } else {
-          showMessage('info', 'Connected to backend. Add a simulation token to load data.');
-        }
       }
 
-      // Polling and other token-protected endpoints still require a token.
-      if (currentSettings.token.trim()) {
-        try {
-          const last = await api.getLastPoll(currentSettings);
-          poll.set(last);
-        } catch (pollErr) {
-          poll.set(null);
+      if (!currentSettings.token.trim()) {
+        map.set(null);
+        poll.set(null);
+        if (versionInfo) {
+          showMessage('info', 'Connected to backend. Paste the simulation token from the backend terminal.');
         }
-      } else {
+        return;
+      }
+
+      try {
+        map.set(await api.getMap(currentSettings));
+      } catch (mapErr) {
+        map.set(null);
+        showMessage('error', mapErr instanceof Error ? mapErr.message : 'Map failed.');
+      }
+
+      try {
+        poll.set(await api.getLastPoll(currentSettings));
+      } catch {
         poll.set(null);
       }
     } catch (error) {
@@ -159,10 +156,10 @@
 
     try {
       await action();
-      showMessage('success', success);
       if (reload) {
         await loadBackendState();
       }
+      showMessage('success', success);
     } catch (error) {
       showMessage('error', error instanceof Error ? error.message : 'API action failed.');
     } finally {
@@ -187,8 +184,13 @@
     message.set(null);
 
     try {
-      poll.set(await api.runPoll(get(settings)));
-      showMessage('success', 'Polling finished.');
+      const nextPoll = await api.runPoll(get(settings));
+      poll.set(nextPoll);
+      const resultCount = nextPoll.national.length + nextPoll.districts.length;
+      showMessage(
+        resultCount ? 'success' : 'info',
+        resultCount ? 'Polling finished.' : 'Polling finished, but the backend returned no result rows.'
+      );
     } catch (error) {
       showMessage('error', error instanceof Error ? error.message : 'Polling failed.');
     } finally {

@@ -10,6 +10,8 @@ export default defineConfig({
       '/increment': { target: 'http://127.0.0.1:8080', changeOrigin: true, secure: false },
       '/reset': { target: 'http://127.0.0.1:8080', changeOrigin: true, secure: false },
       '/snap': { target: 'http://127.0.0.1:8080', changeOrigin: true, secure: false },
+      '/system': { target: 'http://127.0.0.1:8080', changeOrigin: true, secure: false },
+      '/presidential': { target: 'http://127.0.0.1:8080', changeOrigin: true, secure: false },
       '/polling': { target: 'http://127.0.0.1:8080', changeOrigin: true, secure: false },
       '/voter': { target: 'http://127.0.0.1:8080', changeOrigin: true, secure: false },
       '/party': { target: 'http://127.0.0.1:8080', changeOrigin: true, secure: false },

@@ -1,0 +1,19 @@
+crime_rate,gdp_capita,minority_percentage,freedom,infrastructure,life_expectancy,price_food,price_water,price_energy,price_housing,tax_progressiveness,openness,neuroticism,consciencitiousness,agreeableness,extraversion,intelligence,racism,skepticism,ambition,loyalty,local,national,income,job_satisfaction,age,education,crime_themselves,crime_on_him,tolerance,community,unemployment_time,personal_taxes_level,security,risk_aversion,public_spending,cost_of_living,minorities_support,stability,job_security,future_outlook,equality_markets,nation_globe,liberty_authority,tradition_progress
+
+statistics for districts, character, local/national trust, voter's situation, voter's opinion
+
+age - age / 100
+gdp_capita - GDP/capita according to single source (highest)
+price_food - mean daily price
+price_water - per m3
+price_energy - per MWh
+price_housing - per m2 in large cities
+tax_progressiveness - tax_progressiveness of tax curve, difference between highest and lowest (-1 if lower income pay more and upper nothing, 1 opposite)
+infrastructure - combination of factors (max speed, paved, public transit availability)
+freedom - according to RSF
+minority_percentage: 1 - main majority (or equal majorities, e.g. in Switzerland 3 (DE/IT/FR) subtracted, Romansh minority is a minority)
+crime_rate: per 100K as percentage
+
+everything except statistics in range -1 to 1 (incl.)
+
+rest flexible, individual

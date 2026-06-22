@@ -42,7 +42,7 @@ button {
     url("data:image/svg+xml,%3Csvg width='480' height='480' viewBox='0 0 480 480' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.16'%3E%3Cpath d='M90 98h98v86H90zM292 76h96v96h-96zM176 274h112v96H176z'/%3E%3Cpath d='M188 142l104-18M139 184l77 90M340 172l-96 102M288 322l80-42'/%3E%3Ccircle cx='90' cy='98' r='7' fill='%23ffffff' fill-opacity='.23'/%3E%3Ccircle cx='188' cy='184' r='7' fill='%23ffffff' fill-opacity='.23'/%3E%3Ccircle cx='292' cy='76' r='7' fill='%23ffffff' fill-opacity='.23'/%3E%3Ccircle cx='388' cy='172' r='7' fill='%23ffffff' fill-opacity='.23'/%3E%3Ccircle cx='176' cy='274' r='7' fill='%23ffffff' fill-opacity='.23'/%3E%3Ccircle cx='288' cy='370' r='7' fill='%23ffffff' fill-opacity='.23'/%3E%3C/g%3E%3C/svg%3E");
   background-size: cover;
   position: fixed;
-  height: 100svh;
+  min-height: 100vh;
   width: 200px;
 }
 
@@ -584,6 +584,7 @@ progress::-moz-progress-bar {
 .stack-list,
 .party-list,
 .media-grid,
+.voter-list,
 .training-grid {
   display: grid;
   gap: 12px;
@@ -732,6 +733,74 @@ progress::-moz-progress-bar {
   margin-bottom: 18px;
 }
 
+.lookup-bar {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto 44px;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 16px;
+}
+
+.voter-browser {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.15fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.voter-list {
+  max-height: 540px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.list-summary {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid #dbe2ec;
+  border-radius: 8px;
+  color: #42526a;
+  background: #f8fafc;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.voter-list button {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #dbe2ec;
+  border-radius: 8px;
+  color: #172033;
+  background: #ffffff;
+  text-align: left;
+}
+
+.voter-list button:hover,
+.voter-list button.active {
+  border-color: #1f66e5;
+  background: #edf4ff;
+}
+
+.voter-list button span {
+  overflow: hidden;
+  color: #627084;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voter-detail {
+  min-width: 0;
+}
+
 @media (max-width: 1200px) {
   .brand-lockup div:last-child,
   .nav-list span,
@@ -832,9 +901,11 @@ progress::-moz-progress-bar {
 
   .control-strip,
   .api-settings,
+  .lookup-bar,
   .metric-grid,
   .model-stats,
   .health-strip,
+  .voter-browser,
   .media-grid,
   .training-grid {
     grid-template-columns: 1fr;

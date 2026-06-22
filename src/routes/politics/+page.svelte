@@ -5,12 +5,16 @@
 
   const { poll, running, controls, updateControls, runPoll, snapElection } = getSimulationContext();
 
-  let electionType: ElectionType = 'parliament';
-
-  $: electionType = $controls.electionType;
-  $: if (electionType !== $controls.electionType) {
+  function setElectionType(electionType: ElectionType) {
     updateControls({ electionType });
   }
 </script>
 
-<PoliticsPage poll={$poll} running={$running} bind:electionType {runPoll} {snapElection} />
+<PoliticsPage
+  poll={$poll}
+  running={$running}
+  electionType={$controls.electionType}
+  {setElectionType}
+  {runPoll}
+  {snapElection}
+/>

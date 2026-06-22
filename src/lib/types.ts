@@ -32,7 +32,9 @@ export type MapResponse = {
 
 export type PollResult = {
   party_uuid: string;
+  party_name?: string;
   percentage: number;
+  votes?: number;
 };
 
 export type DistrictPoll = {
@@ -79,6 +81,11 @@ export type VoterInput = OpinionPosition & {
 
 export type VoterRecord = VoterInput & {
   voter_uuid?: string;
+};
+
+export type VoterListResponse = {
+  voters: VoterRecord[];
+  total?: number;
 };
 
 export type PartyInput = OpinionPosition & {
