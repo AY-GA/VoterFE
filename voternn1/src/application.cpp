@@ -6,7 +6,7 @@
 int main() {
 	voternn::init();
 
-	voternn::simulation& s = voternn::make_simulation(10, 10);
+	voternn::simulation& s = voternn::make_simulation(30, 30);
 
 	s.emplace_district("Mazowieckie");
 	s.emplace_district("Malopolskie");

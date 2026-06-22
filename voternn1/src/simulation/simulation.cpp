@@ -108,6 +108,36 @@ namespace voternn {
 			}
 			return best;
 		}
+
+		/// Compute a small opinion bias vector from a law text.
+		opinion_position compute_law_bias(const std::string& rawtext) {
+			opinion_position bias{};
+			std::string text = lower_ascii(rawtext);
+			auto contains = [&](const char* token) {
+				return text.find(token) != std::string::npos;
+			};
+
+			if(contains("health") || contains("healthcare") || contains("spend") || contains("fund")) bias.public_spending += 6.0;
+			if(contains("tax") || contains("taxes") || contains("market") || contains("privat")) bias.equality_markets += 5.0;
+			if(contains("minor") || contains("discrimin") || contains("rights")) bias.minorities_support += 6.0;
+			if(contains("secur") || contains("border") || contains("defen") || contains("police")) bias.security += 6.0;
+			if(contains("job") || contains("wage") || contains("employ")) bias.job_security += 4.0;
+			if(contains("tradit") || contains("culture")) bias.tradition_progress += 4.0;
+			if(contains("libert") || contains("freedom")) bias.liberty_authority += 4.0;
+			if(contains("cost") || contains("inflation") || contains("price")) bias.cost_of_living += -3.0;
+			if(contains("future") || contains("outlook")) bias.future_outlook += 3.0;
+			if(contains("stabil") || contains("stability")) bias.stability += 3.0;
+
+			// If no clear keywords, return a very small random nudge
+			bool any = false;
+			for(size_t i = 0; i < 12; ++i) if(bias.values[i] != 0.0) { any = true; break; }
+			if(!any) {
+				std::uniform_real_distribution<double> rnd(-2.0, 2.0);
+				for(size_t i = 0; i < 12; ++i) bias.values[i] = rnd(random_generator);
+			}
+
+			return bias;
+		}
 	}
 
 	std::unordered_map<std::string, simulation> simulations;
@@ -121,6 +151,20 @@ namespace voternn {
 		this->voter_profiles = util::voter_profiles_loader::load_from_csv("../voter_profiles_6100.csv");
 		if (this->voter_profiles.empty()) {
 			std::cerr << "Warning: No voter profiles loaded, voters will have default values" << std::endl;
+		}
+
+		// Create a couple of default laws so UI has examples to show and repeal
+		{
+			const std::string uuid1 = random_string(32);
+			this->laws_list.emplace(uuid1, law{"Increase public healthcare funding by 5% to improve access and outcomes."});
+			const std::string uuid2 = random_string(32);
+			this->laws_list.emplace(uuid2, law{"Reduce corporate taxes by 2% to encourage business investment."});
+		}
+
+		// Create a default media provider
+		{
+			const std::string media_uuid = random_string(32);
+			this->media_list.emplace(media_uuid, media{"State Broadcasting Network"});
 		}
 	}
 
@@ -275,6 +319,23 @@ namespace voternn {
 			result["gridmapping"].push_back(gmobject);
 		} 
 
+		// Expose media providers in the map payload so frontend can list them
+		result["media"] = nlohmann::json::array();
+		for(const auto& m : this->media_list) {
+			nlohmann::json obj;
+			obj["uuid"] = m.first;
+			obj["name"] = m.second.name;
+			result["media"].push_back(obj);
+		}
+
+		// Expose laws so frontend can show existing laws and their UUIDs
+		result["laws"] = nlohmann::json::array();
+		for(const auto& l : this->laws_list) {
+			nlohmann::json obj;
+			obj["uuid"] = l.first;
+			obj["text"] = l.second.text;
+			result["laws"].push_back(obj);
+		}
 
 		return result;
 	}
@@ -604,14 +665,41 @@ namespace voternn {
 
 	void simulation::add_media(const std::string_view name) {
 		const std::string uuid = random_string(32);
-		this->media_list.emplace(uuid, media{});
-		(void)name;
+		this->media_list.emplace(uuid, media{std::string(name)});
+	}
+
+	void simulation::edit_media(const std::string_view uuid, const std::string_view name) {
+		const std::string key(uuid);
+		if(this->media_list.contains(key)) {
+			this->media_list.at(key).name = std::string(name);
+		}
+	}
+
+	void simulation::delete_media(const std::string_view uuid) {
+		const std::string key(uuid);
+		this->media_list.erase(key);
 	}
 
 	void simulation::add_law(const std::string_view text) {
-		const std::string uuid = random_string(32);
-		this->laws_list.emplace(uuid, law{});
-		(void)text;
+ 		const std::string uuid = random_string(32);
+ 		this->laws_list.emplace(uuid, law{std::string(text)});
+
+		// Apply small opinion changes to voters based on the law text.
+		try {
+			auto bias = internal::compute_law_bias(std::string(text));
+			std::uniform_real_distribution<double> scale_dist(0.4, 0.9);
+			for(auto& row : this->voters_list) {
+				auto& voter_instance = row.second;
+				auto& pos = const_cast<opinion_position&>(voter_instance.get_position());
+				double scale = scale_dist(random_generator) * 0.2; // keep nudges small
+				for(size_t i = 0; i < 12; ++i) {
+					double delta = bias.values[i] * scale;
+					pos.values[i] = std::clamp(pos.values[i] + delta, -100.0, 100.0);
+				}
+			}
+		} catch(...) {
+			// Ignore influence failures
+		}
 	}
 
 	void simulation::repeal_law(const std::string_view uuid) {

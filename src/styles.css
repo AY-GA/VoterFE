@@ -724,6 +724,38 @@ progress::-moz-progress-bar {
   color: #526176;
 }
 
+/* Media list style: remove default bullets and show providers as cards */
+.media-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.media-list li {
+  margin: 0;
+  padding: 0;
+}
+
+.media-list .media-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.media-list .media-card small {
+  display: block;
+  color: #8894a6;
+  margin-top: 4px;
+  font-size: 0.82rem;
+}
+
 .training-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-bottom: 18px;

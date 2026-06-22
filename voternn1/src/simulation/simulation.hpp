@@ -125,6 +125,8 @@ namespace voternn {
 		void delete_party(const std::string_view uuid);
 
 		void add_media(const std::string_view name);
+		void edit_media(const std::string_view uuid, const std::string_view name);
+		void delete_media(const std::string_view uuid);
 		void add_law(const std::string_view text);
 		void repeal_law(const std::string_view uuid);
 
@@ -135,10 +137,8 @@ namespace voternn {
 
 		electoral_system system_parliament;
 		presidential_electoral_system system_president;
-
 		// Voter profiles from CSV
 		std::vector<util::voter_profile_data> voter_profiles;
-
 		//pair with UUID
 		std::unordered_map<std::string, voter> voters_list;
 		std::unordered_map<std::string, voter_identity> voter_identities;

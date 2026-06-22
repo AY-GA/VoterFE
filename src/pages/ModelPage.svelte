@@ -137,6 +137,16 @@
     message = sentenceCase(text);
   }
 
+  function barStyle(value: unknown) {
+    const raw = Number(value ?? 0);
+    const absRaw = Math.abs(raw);
+    // Support values in -1..1 or -100..100 ranges
+    const percent = Math.min(100, absRaw > 1 ? absRaw : absRaw * 100);
+    const color = raw < 0 ? 'rgba(235,87,87,0.35)' : 'rgba(31,102,229,0.25)';
+    const bg = raw < 0 ? '#ffecec' : '#f5f8fc';
+    return `--bar:${percent}%;--bar-color:${color};--bar-bg:${bg}`;
+  }
+
   onMount(() => {
     mounted = true;
     lastListKey = listKey;
@@ -220,7 +230,7 @@
             {#each opinionKeys as key}
               <div class="issue-row two-column">
                 <strong>{key}</strong>
-                <span style={`--bar:${Math.min(100, Math.abs(Number(voter[key]) * 100))}%`}>{Number(voter[key]).toFixed(2)}</span>
+                <span style={barStyle(voter[key])}>{Number(voter[key]).toFixed(2)}</span>
               </div>
             {/each}
           </div>

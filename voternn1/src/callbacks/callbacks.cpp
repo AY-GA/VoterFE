@@ -281,12 +281,21 @@ namespace voternn::api {
 			simulations.at(token).add_media(name.value());
 			return std::monostate{};
 		}
-		webserver_handler_return_t edit(API_PARAMS) {
-			return std::monostate{};
-		}
-		webserver_handler_return_t del(API_PARAMS) {
-			return std::monostate{};
-		}
+			webserver_handler_return_t edit(API_PARAMS) {
+				const auto uuid = get_string(json, "uuid");
+				const auto name = get_string(json, "name");
+				if(!uuid.has_value() || !name.has_value()) return handler_client_error_t::NO_PARAM;
+
+				simulations.at(token).edit_media(uuid.value(), name.value());
+				return std::monostate{};
+			}
+			webserver_handler_return_t del(API_PARAMS) {
+				const auto uuid = get_string(json, "uuid");
+				if(!uuid.has_value()) return handler_client_error_t::NO_PARAM;
+
+				simulations.at(token).delete_media(uuid.value());
+				return std::monostate{};
+			}
 	}
 
 	namespace law {
